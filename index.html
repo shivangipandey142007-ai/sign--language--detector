@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sign Language Detector</title>
+  <style>
+    body {
+      text-align: center;
+      font-family: Arial;
+      background-color: #f4f4f4;
+    }
+    video {
+      border: 3px solid black;
+      border-radius: 10px;
+      margin-top: 20px;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    #output {
+      font-size: 30px;
+      color: green;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Sign Language Detector</h1>
+<video id="video" width="500" height="400" autoplay></video>
+<div id="output">Show Thumbs Up 👍</div>
+
+<!-- MediaPipe Hands -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+<script>
+const video = document.getElementById("video");
+const output = document.getElementById("output");
+
+// Flag to prevent continuous speech
+let alreadySpoken = false;
+
+// Start camera
+navigator.mediaDevices.getUserMedia({ video: true })
+  .then(stream => video.srcObject = stream)
+  .catch(err => alert("Camera access denied!"));
+
+// Initialize MediaPipe Hands
+const hands = new Hands({locateFile: (file) => {
+  return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+}});
+
+hands.setOptions({
+  maxNumHands: 1,
+  modelComplexity: 0,  // lightweight
+  minDetectionConfidence: 0.7,
+  minTrackingConfidence: 0.7
+});
+
+// Detect gestures
+hands.onResults(results => {
+  if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+    const landmarks = results.multiHandLandmarks[0];
+
+    // Thumbs up detection
+    if (landmarks[4].y < landmarks[2].y) {
+      output.innerText = "GOOD 👍";
+
+      if (!alreadySpoken) {
+        const msg = new SpeechSynthesisUtterance("Good thumbs up!");
+        window.speechSynthesis.speak(msg);
+        alreadySpoken = true; // Prevent repeat
+      }
+
+    } else { // Gesture changed
+      output.innerText = "Show Thumbs Up 👍";
+      alreadySpoken = false; // Reset flag
+    }
+
+  } else { // No hand detected
+    output.innerText = "Show Thumbs Up 👍";
+    alreadySpoken = false; // Reset flag
+  }
+});
+
+// Camera utils
+const camera = new Camera(video, {
+  onFrame: async () => await hands.send({image: video}),
+  width: 500,
+  height: 400
+});
+camera.start();
+</script>
+
+</body>
+</html>
